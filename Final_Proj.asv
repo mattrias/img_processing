@@ -7,17 +7,21 @@ img = imresize(img, [512 512]);
 imgRes{1} = img; 
 
 rgbImg = img;
+
 hsvImg = rgb2hsv(img);
 ycbcrImg = rgb2ycbcr(img);
 
 lower_bg = [100, 70, 40];   
 upper_bg = [210, 200, 200]; 
 
+
 backgroundMask = (img(:,:,1) >= lower_bg(1) & img(:,:,1) <= upper_bg(1)) & ...
                  (img(:,:,2) >= lower_bg(2) & img(:,:,2) <= upper_bg(2)) & ...
                  (img(:,:,3) >= lower_bg(3) & img(:,:,3) <= upper_bg(3));
 
+
 objectMask = ~backgroundMask;
+
 se = strel('disk', 5); 
 objectMask = imopen(objectMask, se);  
 objectMask = imclose(objectMask, se); 
@@ -36,9 +40,10 @@ hueThresh = (hsvImg(:,:,1) < 0.1) | (hsvImg(:,:,1) > 0.9); % Exclude specific hu
 satThresh = hsvImg(:,:,2) > 0.3; % Saturation threshold
 valThresh = hsvImg(:,:,3) > 0.2; % Brightness threshold
 
+% Combine thresholds to create a refined mask
 mask = satThresh & valThresh & ~hueThresh;
 
-
+% Clean the mask by removing noise and filling holes
 mask = bwareaopen(mask, 500); % Remove small objects
 mask = imfill(mask, 'holes'); % Fill holes
 
@@ -79,26 +84,21 @@ figure;
 imshow(edges);
 imshow(dilatedEdges);
 
-%K-Means
 img = imread('paprika.jpg');
 img = im2double(img); 
 
 labImg = rgb2lab(img);
 [m, n, c] = size(labImg);
-maskedPixelData = reshape(labImg, [], 3);
-maskedPixelData = maskedPixelData(objectMask(:), :);
+pixelData = reshape(labImg, [], 3);
 k = 3; 
 
-[cluster_idx, cluster_center] = kmeans(maskedPixelData, k, 'distance', 'sqEuclidean', ...
+[cluster_idx, cluster_center] = kmeans(pixelData, k, 'distance', 'sqEuclidean', ...
                                        'Replicates', 3);
-
-segmentedLabels = zeros(m * n, 1);
-segmentedLabels(objectMask(:)) = cluster_idx;
-segmentedLabels = reshape(segmentedLabels, m, n);
+segmentedLabels = reshape(cluster_idx, m, n);
 
 cleanedSegments = zeros(m, n, 3);
 
-figure;
+figure
 for i = 1:k
     clusterMask = segmentedLabels == i;
     
@@ -107,13 +107,14 @@ for i = 1:k
     clusterSegment = bsxfun(@times, img, cast(clusterMask, 'like', img));
     
     cleanedSegments = cleanedSegments + clusterSegment;
-        
-    subplot(2,2,i);
+    
+    
+    figure;
     imshow(clusterSegment);
     title(['Cleaned Cluster ', num2str(i)]);
 
 end
 
-subplot(2,2,4)
+figure;
 imshow(cleanedSegments);
 title('Final Cleaned K-means Segmentation');
