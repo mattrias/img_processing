@@ -1,34 +1,42 @@
-imgs = {'paprika.jpg'}; % General image file names
+imgs = {'hirono.jpg'}; % General image file names
 imgCount = length(imgs);
 imgRes = cell(1, imgCount); % Preallocate cell array
 
-img = imread('paprika.jpg');
+img = imread('lighthouse.jpg');
 img = imresize(img, [512 512]);
 imgRes{1} = img; 
 
 rgbImg = img;
-
 hsvImg = rgb2hsv(img);
 ycbcrImg = rgb2ycbcr(img);
 
-lower_bg = [100, 70, 40];   
-upper_bg = [210, 200, 200]; 
+%lower_bg = [100, 70, 40];   
+%upper_bg = [210, 200, 200]; 
 
+%backgroundMask = (img(:,:,1) >= lower_bg(1) & img(:,:,1) <= upper_bg(1)) & ...
+%                (img(:,:,2) >= lower_bg(2) & img(:,:,2) <= upper_bg(2)) & ...
+%               (img(:,:,3) >= lower_bg(3) & img(:,:,3) <= upper_bg(3));
 
-backgroundMask = (img(:,:,1) >= lower_bg(1) & img(:,:,1) <= upper_bg(1)) & ...
-                 (img(:,:,2) >= lower_bg(2) & img(:,:,2) <= upper_bg(2)) & ...
-                 (img(:,:,3) >= lower_bg(3) & img(:,:,3) <= upper_bg(3));
+%objectMask = ~backgroundMask;
+%se = strel('disk', 5); 
+%objectMask = imopen(objectMask, se);  
+%objectMask = imclose(objectMask, se); 
+%objectMask = imfill(objectMask, 'holes');
 
-
-objectMask = ~backgroundMask;
-
-se = strel('disk', 5); 
-objectMask = imopen(objectMask, se);  
-objectMask = imclose(objectMask, se); 
-objectMask = imfill(objectMask, 'holes');
 
 % Segment the objects using the mask
-segmentedObjects = bsxfun(@times, img, cast(objectMask, 'like', img));
+%segmentedObjects = bsxfun(@times, img, cast(objectMask, 'like', img));
+H = hsvImg(:,:,1);
+S = hsvImg(:,:,2);
+V = hsvImg(:,:,3);
+
+[countsH, binsH] = imhist(H);
+[~, bgHueIdx] = max(countsH);
+bgHue = binsH(bgHueIdx);
+
+
+
+
 
 % Display segmented image
 figure;
@@ -40,10 +48,9 @@ hueThresh = (hsvImg(:,:,1) < 0.1) | (hsvImg(:,:,1) > 0.9); % Exclude specific hu
 satThresh = hsvImg(:,:,2) > 0.3; % Saturation threshold
 valThresh = hsvImg(:,:,3) > 0.2; % Brightness threshold
 
-% Combine thresholds to create a refined mask
 mask = satThresh & valThresh & ~hueThresh;
 
-% Clean the mask by removing noise and filling holes
+
 mask = bwareaopen(mask, 500); % Remove small objects
 mask = imfill(mask, 'holes'); % Fill holes
 
@@ -84,21 +91,26 @@ figure;
 imshow(edges);
 imshow(dilatedEdges);
 
-img = imread('paprika.jpg');
+%K-Means
+
 img = im2double(img); 
 
 labImg = rgb2lab(img);
 [m, n, c] = size(labImg);
-pixelData = reshape(labImg, [], 3);
+maskedPixelData = reshape(labImg, [], 3);
+maskedPixelData = maskedPixelData(objectMask(:), :);
 k = 3; 
 
-[cluster_idx, cluster_center] = kmeans(pixelData, k, 'distance', 'sqEuclidean', ...
+[cluster_idx, cluster_center] = kmeans(maskedPixelData, k, 'distance', 'sqEuclidean', ...
                                        'Replicates', 3);
-segmentedLabels = reshape(cluster_idx, m, n);
+
+segmentedLabels = zeros(m * n, 1);
+segmentedLabels(objectMask(:)) = cluster_idx;
+segmentedLabels = reshape(segmentedLabels, m, n);
 
 cleanedSegments = zeros(m, n, 3);
 
-figure
+figure;
 for i = 1:k
     clusterMask = segmentedLabels == i;
     
@@ -107,14 +119,13 @@ for i = 1:k
     clusterSegment = bsxfun(@times, img, cast(clusterMask, 'like', img));
     
     cleanedSegments = cleanedSegments + clusterSegment;
-    
-    
-    figure;
+        
+    subplot(2,2,i);
     imshow(clusterSegment);
     title(['Cleaned Cluster ', num2str(i)]);
 
 end
 
-figure;
+subplot(2,2,4)
 imshow(cleanedSegments);
 title('Final Cleaned K-means Segmentation');

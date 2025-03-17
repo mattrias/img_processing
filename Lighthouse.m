@@ -1,8 +1,8 @@
-imgs = {'paprika.jpg'}; % General image file names
+imgs = {'lighthouse.jpg'}; 
 imgCount = length(imgs);
-imgRes = cell(1, imgCount); % Preallocate cell array
+imgRes = cell(1, imgCount); 
 
-img = imread('paprika.jpg');
+img = imread('lighthouse.jpg');
 img = imresize(img, [512 512]);
 imgRes{1} = img; 
 
@@ -10,17 +10,16 @@ rgbImg = img;
 hsvImg = rgb2hsv(img);
 ycbcrImg = rgb2ycbcr(img);
 
-lower_bg = [100, 70, 40];   
-upper_bg = [210, 200, 200]; 
+lower_bg = [60 , 50, 110];   
+upper_bg = [155, 190, 220]; 
 
 backgroundMask = (img(:,:,1) >= lower_bg(1) & img(:,:,1) <= upper_bg(1)) & ...
                  (img(:,:,2) >= lower_bg(2) & img(:,:,2) <= upper_bg(2)) & ...
                  (img(:,:,3) >= lower_bg(3) & img(:,:,3) <= upper_bg(3));
 
 objectMask = ~backgroundMask;
-se = strel('disk', 5); 
-objectMask = imopen(objectMask, se);  
-objectMask = imclose(objectMask, se); 
+objectMask = imopen(objectMask, strel('disk', 3));  
+objectMask = imclose(objectMask, strel('disk', 5)); 
 objectMask = imfill(objectMask, 'holes');
 
 % Segment the objects using the mask
@@ -76,8 +75,13 @@ se = strel('disk', 2);
 dilatedEdges = imdilate(edges, se);
 
 figure;
+subplot(1,2,1);
 imshow(edges);
+title('Canny Edge Detection');
+
+subplot(1,2,2);
 imshow(dilatedEdges);
+title('Dilated Edges');
 
 %K-Means
 img = im2double(img); 

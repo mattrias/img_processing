@@ -1,17 +1,17 @@
-imgs = {'paprika.jpg'}; % General image file names
+imgs = {'decoy.jpg'}; 
 imgCount = length(imgs);
-imgRes = cell(1, imgCount); % Preallocate cell array
+imgRes = cell(1, imgCount); 
 
-img = imread('paprika.jpg');
+img = imread('decoy.jpg');
 img = imresize(img, [512 512]);
 imgRes{1} = img; 
 
 rgbImg = img;
-hsvImg = rgb2hsv(img);
+
 ycbcrImg = rgb2ycbcr(img);
 
-lower_bg = [100, 70, 40];   
-upper_bg = [210, 200, 200]; 
+lower_bg = [15, 37, 75];   
+upper_bg = [137, 117, 255]; 
 
 backgroundMask = (img(:,:,1) >= lower_bg(1) & img(:,:,1) <= upper_bg(1)) & ...
                  (img(:,:,2) >= lower_bg(2) & img(:,:,2) <= upper_bg(2)) & ...
