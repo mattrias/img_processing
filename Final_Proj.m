@@ -116,3 +116,28 @@ end
 subplot(2,2,4)
 imshow(cleanedSegments);
 title('Final Cleaned K-means Segmentation');
+
+overlayColor = [0, 190, 200] / 255; % Normalize to [0,1] range
+
+% Initialize the overlay image
+coloredOverlay = zeros(m, n, 3);
+
+% Iterate through all clusters and apply the overlay color
+for i = 1:k
+    clusterMask = segmentedLabels == i; % Mask for cluster i
+    
+    for j = 1:3
+        coloredOverlay(:,:,j) = coloredOverlay(:,:,j) + clusterMask * overlayColor(j);
+    end
+end
+
+% Blend with the original image
+alpha = 0.3; % Adjust transparency (lower is more transparent)
+overlayedImage = img .* (1 - alpha) + coloredOverlay * alpha;
+
+% Display overlayed image
+figure;
+imshow(overlayedImage);
+title('K-Means Segmented Overlay (Colored & Transparent)');
+
+
